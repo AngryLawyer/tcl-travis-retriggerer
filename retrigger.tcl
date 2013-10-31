@@ -16,22 +16,11 @@ proc get { url } {
 }
 
 proc post { url data } {
-    return [process_token [http::geturl $url -query [generate_query_params $data] ]]
+    return [process_token [http::geturl $url -query [generate_query_params $data] ] ]
 }
 
 proc generate_query_params { items } {
-    set result ""
-    set first true
-    dict for {key value} $items {
-        if {$first == true} {
-            set first false
-        } else {
-            append result "&"
-        }
-
-        append result $key=$value
-    }
-    return $result
+    return http::formatQuery {*}$items
 }
 
 http::register https 443 ::tls::socket
