@@ -6,7 +6,9 @@ package require json
 
 proc process_token { token } {
     upvar #0 $token state
-    return [json::json2dict $state(body)]
+    set result [json::json2dict $state(body)]
+    http::cleanup $token
+    return $result
 }
 
 proc get { url } {
