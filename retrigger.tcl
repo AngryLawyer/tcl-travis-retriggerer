@@ -31,15 +31,15 @@ proc generate_query_params { items } {
     return [http::formatQuery {*}$items]
 }
 
-proc get_github_token { } {
-    set fp [open "token.txt" r]
+proc get_github_token { token_path } {
+    set fp [open $token_path r]
     set filedata [read $fp]
     close $fp
     return $filedata
 }
 
-proc get_repo_list {} {
-    set fp [open "repos.txt" r]
+proc get_repo_list { repos_path } {
+    set fp [open $repos_path r]
     set filedata [read $fp]
     close $fp
     return [split $filedata]
@@ -49,8 +49,8 @@ proc get_auth_headers { token } {
     return [list Authorization "token $token"]
 }
 
-proc get_travis_token {} {
-    set result [post https://api.travis-ci.org/auth/github "github_token [get_github_token]"]
+proc get_travis_token { token_path } {
+    set result [post https://api.travis-ci.org/auth/github "github_token [get_github_token $token_path]" ]
     return [dict get $result access_token]
 }
 
@@ -64,15 +64,23 @@ proc restart_build { build_id token } {
     return [dict get $result result]
 }
 
-http::register https 443 ::tls::socket
-set token [get_travis_token]
-foreach repo [get_repo_list] {
-    if {$repo != {}} {
-        set build_id [get_last_master_build $repo]
-        if {[restart_build $build_id $token] == true} {
-            puts "Successfully restarted $repo"
-        } else {
-            puts "$repo failed to restart"
+proc main { token_path repos_path } {
+    http::register https 443 ::tls::socket
+    set token [get_travis_token $token_path ]
+    foreach repo [get_repo_list $repos_path ] {
+        if {$repo != {}} {
+            set build_id [get_last_master_build $repo]
+            if {[restart_build $build_id $token] == true} {
+                puts "Successfully restarted $repo"
+            } else {
+                puts "$repo failed to restart"
+            }
         }
     }
+}
+
+if { $argc != 2 } {
+    puts {Usage: retrigger.tcl [Github Token path] [Repos List path]}
+} else {
+    puts [main [lindex $argv 0] [lindex $argv 1] ]
 }
