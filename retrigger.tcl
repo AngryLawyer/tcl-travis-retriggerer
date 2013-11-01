@@ -39,10 +39,10 @@ proc get_github_token { } {
 }
 
 proc get_repo_list {} {
-    set fp [open "token.txt" r]
+    set fp [open "repos.txt" r]
     set filedata [read $fp]
     close $fp
-    return $filedata
+    return [split $filedata]
 }
 
 proc get_auth_headers { token } {
@@ -61,10 +61,18 @@ proc get_last_master_build { repo } {
 
 proc restart_build { build_id token } {
     set result [authenticated_post https://api.travis-ci.org/requests "build_id $build_id" $token]
-    return $result
+    return [dict get $result result]
 }
 
 http::register https 443 ::tls::socket
 set token [get_travis_token]
-set build_id [get_last_master_build AngryLawyer/rust-apl]
-puts [restart_build $build_id $token]
+foreach repo [get_repo_list] {
+    if {$repo != {}} {
+        set build_id [get_last_master_build $repo]
+        if {[restart_build $build_id $token] == true} {
+            puts "Successfully restarted $repo"
+        } else {
+            puts "$repo failed to restart"
+        }
+    }
+}
